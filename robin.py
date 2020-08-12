@@ -5,23 +5,19 @@ import numpy as np
 import tulipy as ti
 import sched
 import time
-import pyotp
 
 #A Simple Robinhood Python Trading Bot using RSI (buy <=30 and sell >=70 RSI) and with support and resistance.
 
 ## DONALDS IS A BIG OL FAG!!!!
 
 # Log in to Robinhood app (will prompt for two-factor)
-totp = pyotp.TOTP("23MIJTMSABTIM7FV").now()
-#totp = pyotp.TOTP("867029").now()
 rh = Robinhood()
 rh.login(username=config.USERNAME, password=config.PASSWORD,  qr_code=config.MFA)
 #Setup our variables, we haven't entered a trade yet and our RSI period
 enteredTrade = False
-rsiPeriod = 200
+rsiPeriod = 5
 #Initiate our scheduler so we can keep checking every minute for new price changes
 s = sched.scheduler(time.time, time.sleep)
-s1 = sched.scheduler(time.time, time.sleep)
 def run(sc): 
     global enteredTrade
     global rsiPeriod
@@ -73,17 +69,9 @@ def run(sc):
             #rh.place_sell_order(instrument, 1)
             enteredTrade = False
         print("RSI: {}".format(rsi))
-        print("SAM: {}".format(sma))
+        print("SMA: {}".format(sma))
     #call this method again every 5 minutes for new price changes
     s.enter(300, 1, run, (sc,))
 
-def fetch_news(sc1):
-    print("Getting news")
-    #print(get_news("WKHS"))
-    get_news("WKHS")
-    s.enter(300, 1, get_news, (sc1,))
-
 s.enter(1, 1, run, (s,))
-#s1.enter(1, 1, get_news, (s1,))
 s.run()
-#s1.get_news()
