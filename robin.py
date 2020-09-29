@@ -29,60 +29,80 @@ def run(sc):
 
     print("Getting historical quotes on {}".format(time_string))
     stock_ticker = "WKHS"
-    historical_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year') # Currently getting years worth of data by day. 251 days worth.
-    closePrices = []
+    day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year') # Currently getting years worth of data by day. 251 days worth.
+    fivemin_day_quotes = rh.get_historical_quotes(stock_ticker, '5minute', 'day') # Currently getting years worth of data by day. 251 days worth.
+    close_prices = []
+    fivemin_close_prices = []
 
     # Get all closing prices.
-    for key in historical_quotes["results"][0]["historicals"]:
-        closePrices.append(float(key['close_price']))
+    for key in day_year_quotes["results"][0]["historicals"]:
+        close_prices.append(float(key['close_price']))
+    for key in fivemin_day_quotes["results"][0]["historicals"]: # Data starts at 13:30 - 19:55 AKA 8:30am - 2:55pm
+        fivemin_close_prices.append(float(key['close_price']))
 
-    DATA = np.array(closePrices)
+    #print(* fivemin_day_quotes["results"][0]["historicals"], sep='\n')
 
-    if (len(closePrices) >= (dayPeriod)):
-        #Calculate Indicators
-        indicator_period = 3
-        rsi = ti.rsi(DATA, period=indicator_period) # Currently only using this one
-        sma = ti.sma(DATA, period=indicator_period)
-        ema = ti.ema(DATA, period=indicator_period)
-        instrument = rh.instruments(stock_ticker)[0]
+    # Data before manual price add. 
+    DATA = np.array(close_prices)
+    FIVEMIN_DATA = np.array(fivemin_close_prices)
 
-        # Extra variables that are not being used. Just saving. 
-        previousClosePrice = rh.previous_close(stock_ticker)  # yesterdays close price
-        lastTradePrice = rh.last_trade_price(stock_ticker)   # last trade price i think is 8pm\7:55pm
-        lastExtendedHoursPrice = rh.get_quote(stock_ticker)['last_extended_hours_trade_price'] 
+     # adds latest trading price to the list of day:year closing prices. Not sure how this will affect indicators.
+    close_prices.append(float(rh.quote_data("WKHS")['last_trade_price']))
+    EXP_DATA = np.array(close_prices) # Data with latest trading price
 
-        ## BUYING LOGIC
-        #If rsi is less than or equal to 20 buy
-        #if rsi[len(rsi) - 1] <= 20 and float(key['close_price']) <= currentSupport and not enteredTrade:
-        five_recent_rsi = {}
-        if rsi[-1] <= 20 and not enteredTrade: # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
-            print("RSI is below 20! Send signal that it may be time to buy / move into next stage of program which utilized 5minute:day chart instead of day:year chart to do so")
+    #Calculate Indicators and get instrument we will be trading.
+    indicator_period = 3
+    rsi = ti.rsi(DATA, period=indicator_period) # Currently only using this one
+    stochrsi = ti.stochrsi(DATA, period=indicator_period)
+    current_rsi = ti.rsi(EXP_DATA, period=indicator_period)
+    #sma = ti.sma(DATA, period=indicator_period)
+    #ema = ti.ema(DATA, period=indicator_period)
 
-            print("Previous 5 RSIs")
-            for x in range(1,6):
-                date = historical_quotes["results"][0]["historicals"][-x]['begins_at']
-                #five_recent_rsi[date] = rsi[-x]
-                print("Date: {} RSI: {}".format(date,rsi[-x]))
+    instrument = rh.instruments(stock_ticker)[0]
 
-            # Market buy order, not a limit order.
-            #rh.place_buy_order(instrument, 10)
-            #enteredTrade = True
+    # Extra variables that are not being used. Just saving. 
+    previousClosePrice = rh.previous_close(stock_ticker)  # yesterdays close price
+    lastTradePrice = rh.last_trade_price(stock_ticker)   # last trade price i think is 8pm\7:55pm
+    lastExtendedHoursPrice = rh.get_quote(stock_ticker)['last_extended_hours_trade_price'] 
+
+    ## BUYING LOGIC - If rsi is less than or equal to 20 move to next stage
+    five_recent_rsi = {}
+    rsi[-1] = 17 ## TEST TO GET INTO STATEMENT!!
+    if rsi[-1] <= 20 and not enteredTrade: # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
+        print("RSI is below 20! Send signal that it may be time to buy / move into next stage of program which utilized 5minute:day chart instead of day:year chart to do so")
+
+        #if (len(fivemin_close_prices) >= (indicator_period)): # May need this for when the day starts if we cant get previous days 5 min data.
+        # Start 5 min chart data area
+        indicator_period = 5
+        fivemin_rsi = ti.rsi(FIVEMIN_DATA, period=indicator_period) # Cant get correct numbers, comparing with tradeview
+        fivemin_stochrsi = ti.stochrsi(FIVEMIN_DATA, period=indicator_period) # Cant get correct numbers, comparing with tradeview
+
+        print("Previous 5 fivemin RSIs")
+        for x in range(1,6):
+            date = fivemin_day_quotes["results"][0]["historicals"][-x]['begins_at']
+            print("Date: {} RSI: {}".format(date,fivemin_rsi[-x]))
+            print("Date: {} CLOSE: {}".format(date,FIVEMIN_DATA[-x]))
+
+        # Market buy order, not a limit order.
+        #rh.place_buy_order(instrument, 10)
+        enteredTrade = True
 
 
-        ## SELLING LOGIC
-        #Sell when RSI reaches 80
-        if rsi[-1] >= 80 and enteredTrade:
-            print("RSI is above 80! Send signal that it may be time to sell / move into next stage and find a nice price to sell at. Utilize 5minute:day chart to do so")
 
-            print("Previous 5 RSIs")
-            for x in range(1,6):
-                date = historical_quotes["results"][0]["historicals"][-x]['begins_at']
-                #five_recent_rsi[date] = rsi[-x]
-                print("Date: {} RSI: {}".format(date,rsi[-x]))
 
-            # Market buy order, not a limit order.
-            #rh.place_sell_order(instrument, 10)
-            #enteredTrade = False
+
+    ## SELLING LOGIG - if rsi is greater than or equal to 80 move to next stage
+    if rsi[-1] >= 80 and enteredTrade:
+        print("RSI is above 80! Send signal that it may be time to sell / move into next stage and find a nice price to sell at. Utilize 5minute:day chart to do so")
+
+        print("Previous 5 RSIs")
+        for x in range(1,6):
+            date = day_year_quotes["results"][0]["historicals"][-x]['begins_at']
+            print("Date: {} RSI: {}".format(date,rsi[-x]))
+
+        # Market buy order, not a limit order.
+        #rh.place_sell_order(instrument, 10)
+        enteredTrade = False
 
 
     #call this method again every 5 minutes for new price changes
