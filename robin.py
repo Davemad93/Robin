@@ -32,13 +32,9 @@ def run(sc):
 
     print("Getting historical quotes on {}".format(time_string))
     stock_ticker = "WKHS"
-    day_year_quotes = rh.get_historical_quotes(
-        stock_ticker, 'day', 'year'
-    )  # Currently getting years worth of data by day. 251 days worth.
+    day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')  # Currently getting years worth of data by day. 251 days worth.
 
-    fivemin_day_quotes = rh.get_historical_quotes(
-        stock_ticker, '5minute', 'day'
-    )  # Currently getting years worth of data by 5min. 251 days worth.
+    fivemin_day_quotes = rh.get_historical_quotes(stock_ticker, '5minute', 'day')  # Currently getting years worth of data by 5min. 251 days worth.
 
     close_prices = []
     fivemin_close_prices = []
@@ -63,8 +59,7 @@ def run(sc):
 
     #Calculate Indicators and get instrument we will be trading.
     indicator_period = 3
-    rsi = ti.rsi(DATA,
-                 period=indicator_period)  # Currently only using this one
+    rsi = ti.rsi(DATA, period=indicator_period)  # Currently only using this one
 
     stochrsi = ti.stochrsi(DATA, period=indicator_period)
     current_rsi = ti.rsi(EXP_DATA, period=indicator_period)
@@ -78,8 +73,7 @@ def run(sc):
     previous_close_price = rh.previous_close(stock_ticker)
     # last trade price i think is 8pm\7:55pm
     last_trade_price = rh.last_trade_price(stock_ticker)
-    last_extended_hours_price = rh.get_quote(
-        stock_ticker)['last_extended_hours_trade_price']
+    last_extended_hours_price = rh.get_quote(stock_ticker)['last_extended_hours_trade_price']
 
     five_recent_rsi = {}
     rsi[-1] = 17  ## TEST TO GET INTO STATEMENT!!
@@ -100,20 +94,14 @@ s.run()
 
 def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
     if rsi[-1] <= 20 and not entered_trade:  # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
-        print(
-            "RSI is below 20! Send signal that it may be time to buy / move into next stage of program which utilized 5minute:day chart instead of day:year chart to do so"
-        )
+        print("RSI is below 20! Send signal that it may be time to buy / move into next stage of program which utilized 5minute:day chart instead of day:year chart to do so")
 
         #if (len(fivemin_close_prices) >= (indicator_period)): # May need this for when the day starts if we cant get previous days 5 min data.
         # Start 5 min chart data area
         indicator_period = 5
-        fivemin_rsi = ti.rsi(
-            type_of_data, period=indicator_period
-        )  # Cant get correct numbers, comparing with tradeview
+        fivemin_rsi = ti.rsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
 
-        fivemin_stochrsi = ti.stochrsi(
-            type_of_data, period=indicator_period
-        )  # Cant get correct numbers, comparing with tradeview
+        fivemin_stochrsi = ti.stochrsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
 
         print("Previous 5 fivemin RSIs")
         for x in range(1, 6):
@@ -129,9 +117,7 @@ def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
 
 def sell_stock(rsi, entered_trade, day_year_quotes):
     if rsi[-1] >= 80 and entered_trade:
-        print(
-            "RSI is above 80! Send signal that it may be time to sell / move into next stage and find a nice price to sell at. Utilize 5minute:day chart to do so"
-        )
+        print("RSI is above 80! Send signal that it may be time to sell / move into next stage and find a nice price to sell at. Utilize 5minute:day chart to do so")
 
         print("Previous 5 RSIs")
         for x in range(1, 6):
@@ -149,15 +135,11 @@ def calculate_percent_difference(prev_num, curr_num):
     if curr_num > prev_num:  # This is a percent increase
         increase = float(curr_num) - float(prev_num)
         percent_increase = (increase / float(prev_num)) * 100
-        return "The percent increase is: {}".format(
-            percent_increase
-        )  # if number is negative then this is a percent decrease
+        return "The percent increase is: {}".format(percent_increase)  # if number is negative then this is a percent decrease
     elif curr_num < prev_num:
         decrease = float(prev_num) - float(curr_num)
         percent_decrease = (decrease / float(prev_num)) * 100
-        return "The percent decrease is: {}".format(
-            percent_decrease
-        )  # if answer is negative then this is a percent increase
+        return "The percent decrease is: {}".format(percent_decrease)  # if answer is negative then this is a percent increase
     elif curr_num == prev_num:
         return "curr_num and prev_num are equal."
     else:
