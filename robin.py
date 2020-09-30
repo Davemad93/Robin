@@ -3,6 +3,7 @@ from datetime import datetime
 import config
 import numpy as np
 import tulipy as ti
+import yahoo_finance
 import sched
 import time
 import pyotp
@@ -36,6 +37,8 @@ def run(sc):
 
     fivemin_day_quotes = rh.get_historical_quotes(stock_ticker, '5minute', 'day')  # Currently getting years worth of data by 5min. 251 days worth.
 
+    five_min_day_yahoo = yahoo_finance.get_stock_history("WKHS","1d","5m")
+
     close_prices = []
     fivemin_close_prices = []
 
@@ -51,7 +54,7 @@ def run(sc):
 
     # Data before manual price add.
     DATA = np.array(close_prices)
-    FIVEMIN_DATA = np.array(fivemin_close_prices)
+    FIVEMIN_DATA = np.array(five_min_day_yahoo)
 
     # adds latest trading price to the list of day:year closing prices. Not sure how this will affect indicators.
     close_prices.append(float(rh.quote_data("WKHS")['last_trade_price']))
@@ -86,10 +89,6 @@ def run(sc):
 
     #call this method again every 5 minutes for new price changes
     s.enter(300, 1, run, (sc, ))
-
-
-s.enter(1, 1, run, (s, ))
-s.run()
 
 
 def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
@@ -144,3 +143,11 @@ def calculate_percent_difference(prev_num, curr_num):
         return "curr_num and prev_num are equal."
     else:
         return "Some error occured, mayday!!!!"
+
+
+s.enter(1, 1, run, (s, ))
+s.run()
+
+
+if __name__ == '__main__':
+    run()
