@@ -18,7 +18,7 @@ def get_stock_history(stock_name, time_period, interval):
     #print(str(today).split(" ")[0])
     #print(str(sixty_days_before).split(" ")[0])
 
-    hist = stock.history(interval="5m", start=sixty_days_before, end=today)
+    hist = stock.history(interval="5m", start=sixty_days_before, end=today, prepost="True")
     #print(hist)
 
     # time.sleep(1)
