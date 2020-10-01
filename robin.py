@@ -35,13 +35,12 @@ def run(sc):
     stock_ticker = "WKHS"
     day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')  # Currently getting years worth of data by day. 251 days worth.
 
-    fivemin_day_quotes = rh.get_historical_quotes(stock_ticker, '5minute', 'day')  # Currently getting years worth of data by 5min. 251 days worth.
+    fivemin_day_quotes = rh.get_historical_quotes(stock_ticker, '5minute', 'day')  # this only gets the current dats 5min data
 
-    five_min_day_yahoo = yahoo_finance.get_stock_history("WKHS","1d","5m")
+    five_min_day_yahoo = yahoo_finance.get_stock_history("WKHS","1d","5m") # This gets the last 60 days including today.
 
     close_prices = []
     fivemin_close_prices = []
-
     # Get all closing prices.
     for key in day_year_quotes["results"][0]["historicals"]:
         close_prices.append(float(key['close_price']))
@@ -103,9 +102,8 @@ def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
         fivemin_stochrsi = ti.stochrsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
 
         print("Previous 5 fivemin RSIs")
-        for x in range(1, 6):
-            date = fivemin_day_quotes["results"][0]["historicals"][-x][
-                'begins_at']
+        for x in range(1, 60):
+            date = fivemin_day_quotes["results"][0]["historicals"][-x]['begins_at']
             print("Date: {} RSI: {}".format(date, fivemin_rsi[-x]))
             print("Date: {} CLOSE: {}".format(date, type_of_data[-x]))
 
