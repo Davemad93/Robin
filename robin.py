@@ -41,7 +41,6 @@ def run(sc):
 
     # Get quote data from RH API
     day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')  # Currently getting years worth of data by day. 251 days worth.
-    fivemin_day_quotes = rh.get_historical_quotes(stock_ticker, '5minute', 'day')  # Currently getting years worth of data by day. 251 days worth.
 
     # Get quote data from YF API
     five_min_day_yahoo = yahoo_finance.get_stock_history("WKHS","1d","5m") # This gets the last 60 days including today.
@@ -52,43 +51,45 @@ def run(sc):
         close_prices.append(float(key['close_price']))
 
     # Create Numpy DataFrame
-    DATA = np.array(close_prices)
+    DAILY_DATA = np.array(close_prices)
     FIVEMIN_DATA = np.array(five_min_day_yahoo)
-
-    #Calculate Indicators and get instrument we will be trading.
-    indicator_period = 3
-    rsi = ti.rsi(DATA, period=indicator_period)  # Currently only using this one
 
     # Get stock instrument
     instrument = rh.instruments(stock_ticker)[0]
 
-    ## BUYING LOGIC - If rsi is less than or equal to 20 move to next stage
-    buy_stock(rsi, entered_trade, fivemin_day_quotes, FIVEMIN_DATA)
+    # Calculate Indicator
+    indicator_period = 3
+    rsi = ti.rsi(DAILY_DATA, period=indicator_period)
+    rsi_5 = ti.rsi(FIVEMIN_DATA, period=5)
 
-    ## SELLING LOGIG - if rsi is greater than or equal to 80 move to next stage
-    sell_stock(rsi, entered_trade, day_year_quotes)
+    trade_logic_data = {'RSI':rsi, "RSI_5":rsi_5, "daily_close_prices":DAILY_DATA }
+
+    rsi[-1] = 17
+    ## BUYING LOGIC 
+    buy_stock(trade_logic_data, entered_trade, DAILY_DATA)
+
+    ## SELLING LOGIG
+    sell_stock(rsi, entered_trade, DAILY_DATA)
 
     #call this method again every 5 minutes for new price changes
     s.enter(300, 1, run, (sc, ))
 
 
-def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
+def buy_stock(logic_data, entered_trade, close_prices):
+    # Check latest day:year rsi.
+    rsi = logic_data['RSI']
     if rsi[-1] <= 20 and not entered_trade:  # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
         msg = "RSI is below 20! Sending email that we are entering intraday trading to BUY our stock. Utilizing 5minute:day chart to do so"
         #send_email('ALERT!!!',msg)
         print(msg)
 
-        # Start 5 min chart data area
-        indicator_period = 5
-        fivemin_rsi = ti.rsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
-
+        rsi_5 = logic_data['RSI_5']
         print("Previous RSIs")
         for x in range(1, 11):
-            date = fivemin_day_quotes["results"][0]["historicals"][-x]['begins_at']
-            print("Date: {} RSI: {}".format(date, fivemin_rsi[-x]))
-            print("Date: {} CLOSE: {}".format(date, type_of_data[-x]))
+            print("CLOSE: {} RSI: {}".format(close_prices[-x], rsi_5[-x]))
 
-        if fivemin_rsi[-1] <= 20:
+        # Check latest 5minute:60day rsi. If below 20 SELL!!
+        if rsi_5[-1] <= 20:
             # Market buy order, not a limit order.
             #rh.place_buy_order(instrument, 10)
             entered_trade = True # Entering trade
@@ -96,25 +97,19 @@ def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
 
 
 
-def sell_stock(rsi, entered_trade, day_year_quotes):
+def sell_stock(rsi, entered_trade, close_prices):
+    # Check latest day:year rsi.
     if rsi[-1] >= 80 and entered_trade: # Will only sell if we have entered a trade.
         msg = "RSI is abvove 80! Sending email that we are entering intraday trading to SELL our stock. Utilizing 5minute:day chart to do so"
         #send_email('ALERT!!!',msg)
         print(msg)
 
-        # Start 5 min chart data area
-        indicator_period = 5
-        fivemin_rsi = ti.rsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
-
-        fivemin_stochrsi = ti.stochrsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
-
         print("Previous RSIs")
         for x in range(1, 11):
-            date = fivemin_day_quotes["results"][0]["historicals"][-x]['begins_at']
-            print("Date: {} RSI: {}".format(date, fivemin_rsi[-x]))
-            print("Date: {} CLOSE: {}".format(date, type_of_data[-x]))
+            print("CLOSE: {} RSI: {}".format(close_prices[-x], rsi_5[-x]))
 
-        if fivemin_rsi[-1] >= 80:
+        # Check latest 5minute:60day rsi. If above 80 SELL!!
+        if rsi_5[-1] >= 80:
             # Market buy order, not a limit order.
             #rh.place_sell_order(instrument, 10)
             entered_trade = False # Exiting trade
@@ -136,13 +131,13 @@ def calculate_percent_difference(prev_num, curr_num):
         return "Some error occured, mayday!!!!"
 
 def send_email(sbj, msg):
-    gmail_user = 'xtraderbotx@gmail.com'
-    gmail_password = '9&y6GPWrA!pnu9M9u4iv'
+    gmail_user = config.GUSER 
+    gmail_password = config.GPASS
     text_type = 'plain'
     text = msg
     msg = MIMEText(text, 'plain', 'utf-8') # plain/html
     msg['Subject'] = sbj
-    msg['From'] = 'xtraderbotx@gmail.com'
+    msg['From'] = gmail_user
     server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
     server.login(gmail_user, gmail_password)
     for email in config.EMAILS:
