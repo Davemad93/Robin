@@ -22,4 +22,4 @@ def get_stock_history(stock_name, time_period, interval):
     #print(hist)
 
     # time.sleep(1)
-    return hist["Close"]
+    return hist["Close"][:-1]
