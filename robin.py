@@ -32,54 +32,35 @@ def run(sc):
     global day_period
     time_string = time.strftime("%m/%d/%Y, %H:%M:%S", time.localtime())
 
+
+    # POST TIME
     print("Getting historical quotes on {}".format(time_string))
+
+    # STOCK TICKER
     stock_ticker = "WKHS"
+
+    # Get quote data from RH API
     day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')  # Currently getting years worth of data by day. 251 days worth.
+    fivemin_day_quotes = rh.get_historical_quotes(stock_ticker, '5minute', 'day')  # Currently getting years worth of data by day. 251 days worth.
 
-    fivemin_day_quotes = rh.get_historical_quotes(stock_ticker, '5minute', 'day')  # this only gets the current dats 5min data
-
+    # Get quote data from YF API
     five_min_day_yahoo = yahoo_finance.get_stock_history("WKHS","1d","5m") # This gets the last 60 days including today.
 
+    # Create list of closing prices from RH API
     close_prices = []
-    fivemin_close_prices = []
-    # Get all closing prices.
     for key in day_year_quotes["results"][0]["historicals"]:
         close_prices.append(float(key['close_price']))
 
-    for key in fivemin_day_quotes["results"][0][
-            "historicals"]:  # Data starts at 13:30 - 19:55 AKA 8:30am - 2:55pm
-        fivemin_close_prices.append(float(key['close_price']))
-
-    #print(* fivemin_day_quotes["results"][0]["historicals"], sep='\n')
-
-    # Data before manual price add.
+    # Create Numpy DataFrame
     DATA = np.array(close_prices)
     FIVEMIN_DATA = np.array(five_min_day_yahoo)
-
-    # adds latest trading price to the list of day:year closing prices. Not sure how this will affect indicators.
-    close_prices.append(float(rh.quote_data("WKHS")['last_trade_price']))
-    EXP_DATA = np.array(close_prices)  # Data with latest trading price
 
     #Calculate Indicators and get instrument we will be trading.
     indicator_period = 3
     rsi = ti.rsi(DATA, period=indicator_period)  # Currently only using this one
 
-    stochrsi = ti.stochrsi(DATA, period=indicator_period)
-    current_rsi = ti.rsi(EXP_DATA, period=indicator_period)
-    #sma = ti.sma(DATA, period=indicator_period)
-    #ema = ti.ema(DATA, period=indicator_period)
-
+    # Get stock instrument
     instrument = rh.instruments(stock_ticker)[0]
-
-    # Extra variables that are not being used. Just saving.
-    # yesterdays close price
-    previous_close_price = rh.previous_close(stock_ticker)
-    # last trade price i think is 8pm\7:55pm
-    last_trade_price = rh.last_trade_price(stock_ticker)
-    last_extended_hours_price = rh.get_quote(stock_ticker)['last_extended_hours_trade_price']
-
-    five_recent_rsi = {}
-    rsi[-1] = 17  ## TEST TO GET INTO STATEMENT!!
 
     ## BUYING LOGIC - If rsi is less than or equal to 20 move to next stage
     buy_stock(rsi, entered_trade, fivemin_day_quotes, FIVEMIN_DATA)
@@ -93,11 +74,34 @@ def run(sc):
 
 def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
     if rsi[-1] <= 20 and not entered_trade:  # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
-        msg = "RSI is above 80! Send signal that it may be time to sell / move into next stage and find a nice price to sell at. Utilize 5minute:day chart to do so"
+        msg = "RSI is below 20! Sending email that we are entering intraday trading to BUY our stock. Utilizing 5minute:day chart to do so"
         #send_email('ALERT!!!',msg)
         print(msg)
 
-        #if (len(fivemin_close_prices) >= (indicator_period)): # May need this for when the day starts if we cant get previous days 5 min data.
+        # Start 5 min chart data area
+        indicator_period = 5
+        fivemin_rsi = ti.rsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
+
+        print("Previous RSIs")
+        for x in range(1, 11):
+            date = fivemin_day_quotes["results"][0]["historicals"][-x]['begins_at']
+            print("Date: {} RSI: {}".format(date, fivemin_rsi[-x]))
+            print("Date: {} CLOSE: {}".format(date, type_of_data[-x]))
+
+        if fivemin_rsi[-1] <= 20:
+            # Market buy order, not a limit order.
+            #rh.place_buy_order(instrument, 10)
+            entered_trade = True # Entering trade
+
+
+
+
+def sell_stock(rsi, entered_trade, day_year_quotes):
+    if rsi[-1] >= 80 and entered_trade: # Will only sell if we have entered a trade.
+        msg = "RSI is abvove 80! Sending email that we are entering intraday trading to SELL our stock. Utilizing 5minute:day chart to do so"
+        #send_email('ALERT!!!',msg)
+        print(msg)
+
         # Start 5 min chart data area
         indicator_period = 5
         fivemin_rsi = ti.rsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
@@ -110,24 +114,10 @@ def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
             print("Date: {} RSI: {}".format(date, fivemin_rsi[-x]))
             print("Date: {} CLOSE: {}".format(date, type_of_data[-x]))
 
-        # Market buy order, not a limit order.
-        #rh.place_buy_order(instrument, 10)
-        entered_trade = True
-
-
-def sell_stock(rsi, entered_trade, day_year_quotes):
-    if rsi[-1] >= 80 and entered_trade:
-        print("RSI is above 80! Send signal that it may be time to sell / move into next stage and find a nice price to sell at. Utilize 5minute:day chart to do so")
-
-        print("Previous 5 RSIs")
-        for x in range(1, 6):
-            date = day_year_quotes["results"][0]["historicals"][-x][
-                'begins_at']
-            print("Date: {} RSI: {}".format(date, rsi[-x]))
-
-        # Market buy order, not a limit order.
-        #rh.place_sell_order(instrument, 10)
-        entered_trade = False
+        if fivemin_rsi[-1] >= 80:
+            # Market buy order, not a limit order.
+            #rh.place_sell_order(instrument, 10)
+            entered_trade = False # Exiting trade
 
 
 # takes in two numbers and gives back the percent difference wheather it be an increase or decrease.
@@ -157,7 +147,6 @@ def send_email(sbj, msg):
     server.login(gmail_user, gmail_password)
     for email in config.EMAILS:
         server.sendmail(msg['From'], email, msg.as_string())
-        #server.sendmail(msg['From'], msg['To'], msg.as_string())
     server.quit()
 
 
