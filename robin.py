@@ -19,19 +19,19 @@ rh.login(username=config.USERNAME,
          password=config.PASSWORD,
          qr_code=config.MFA)
 
-#Setup our variables, we haven't entered a trade yet and our RSI period
+#Setup some variables
 entered_trade = False
-day_period = 251
+
+# put this here for now so it doesnt keep calling
+# Get quote data from RH API
+day_year_quotes = rh.get_historical_quotes('WKHS', 'day', 'year')
 
 #Initiate our scheduler so we can keep checking every minute for new price changes
 s = sched.scheduler(time.time, time.sleep)
 
-
 def run(sc):
     global entered_trade
-    global day_period
     time_string = time.strftime("%m/%d/%Y, %H:%M:%S", time.localtime())
-
 
     # POST TIME
     print("Getting historical quotes on {}".format(time_string))
@@ -40,10 +40,12 @@ def run(sc):
     stock_ticker = "WKHS"
 
     # Get quote data from RH API
-    day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')  # Currently getting years worth of data by day. 251 days worth.
+    #day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')  # Currently getting years worth of data by day. 251 days worth.
 
     # Get quote data from YF API
     five_min_day_yahoo = yahoo_finance.get_stock_history("WKHS","1d","5m") # This gets the last 60 days including today.
+
+    #print(* day_year_quotes["results"][0]["historicals"], sep="\n")
 
     # Create list of closing prices from RH API
     close_prices = []
@@ -60,16 +62,16 @@ def run(sc):
     # Calculate Indicator
     indicator_period = 3
     rsi = ti.rsi(DAILY_DATA, period=indicator_period)
-    rsi_5 = ti.rsi(FIVEMIN_DATA, period=5)
+    rsi_5 = ti.rsi(FIVEMIN_DATA, period=indicator_period)
 
-    trade_logic_data = {'RSI':rsi, "RSI_5":rsi_5, "daily_close_prices":DAILY_DATA }
+    trade_logic_data = {'RSI':rsi, "RSI_5":rsi_5, "fivemin_close_prices":FIVEMIN_DATA }
 
     rsi[-1] = 17
     ## BUYING LOGIC 
-    buy_stock(trade_logic_data, entered_trade, DAILY_DATA)
+    buy_stock(trade_logic_data, entered_trade, FIVEMIN_DATA)
 
     ## SELLING LOGIG
-    sell_stock(rsi, entered_trade, DAILY_DATA)
+    sell_stock(trade_logic_data, entered_trade, FIVEMIN_DATA)
 
     #call this method again every 5 minutes for new price changes
     s.enter(300, 1, run, (sc, ))
@@ -97,13 +99,15 @@ def buy_stock(logic_data, entered_trade, close_prices):
 
 
 
-def sell_stock(rsi, entered_trade, close_prices):
+def sell_stock(logic_data, entered_trade, close_prices):
     # Check latest day:year rsi.
+    rsi = logic_data['RSI']
     if rsi[-1] >= 80 and entered_trade: # Will only sell if we have entered a trade.
         msg = "RSI is abvove 80! Sending email that we are entering intraday trading to SELL our stock. Utilizing 5minute:day chart to do so"
         #send_email('ALERT!!!',msg)
         print(msg)
 
+        rsi_5 = logic_data['RSI_5']
         print("Previous RSIs")
         for x in range(1, 11):
             print("CLOSE: {} RSI: {}".format(close_prices[-x], rsi_5[-x]))
