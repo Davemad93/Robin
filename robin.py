@@ -1,12 +1,13 @@
 from pyrh import Robinhood
 from datetime import datetime
+from email.mime.text import MIMEText
 import config
 import numpy as np
 import tulipy as ti
 import yahoo_finance
-import sched
-import time
+import sched, time
 import pyotp
+import smtplib
 
 #A Simple Robinhood Python Trading Bot using RSI (buy <=30 and sell >=70 RSI) and with support and resistance.
 #totp = pyotp.TOTP("").now()
@@ -92,7 +93,9 @@ def run(sc):
 
 def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
     if rsi[-1] <= 20 and not entered_trade:  # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
-        print("RSI is below 20! Send signal that it may be time to buy / move into next stage of program which utilized 5minute:day chart instead of day:year chart to do so")
+        msg = "RSI is above 80! Send signal that it may be time to sell / move into next stage and find a nice price to sell at. Utilize 5minute:day chart to do so"
+        #send_email('ALERT!!!',msg)
+        print(msg)
 
         #if (len(fivemin_close_prices) >= (indicator_period)): # May need this for when the day starts if we cant get previous days 5 min data.
         # Start 5 min chart data area
@@ -101,8 +104,8 @@ def buy_stock(rsi, entered_trade, fivemin_day_quotes, type_of_data):
 
         fivemin_stochrsi = ti.stochrsi(type_of_data, period=indicator_period)  # Cant get correct numbers, comparing with tradeview
 
-        print("Previous 5 fivemin RSIs")
-        for x in range(1, 60):
+        print("Previous RSIs")
+        for x in range(1, 11):
             date = fivemin_day_quotes["results"][0]["historicals"][-x]['begins_at']
             print("Date: {} RSI: {}".format(date, fivemin_rsi[-x]))
             print("Date: {} CLOSE: {}".format(date, type_of_data[-x]))
@@ -141,6 +144,21 @@ def calculate_percent_difference(prev_num, curr_num):
         return "curr_num and prev_num are equal."
     else:
         return "Some error occured, mayday!!!!"
+
+def send_email(sbj, msg):
+    gmail_user = 'xtraderbotx@gmail.com'
+    gmail_password = '9&y6GPWrA!pnu9M9u4iv'
+    text_type = 'plain'
+    text = msg
+    msg = MIMEText(text, 'plain', 'utf-8') # plain/html
+    msg['Subject'] = sbj
+    msg['From'] = 'xtraderbotx@gmail.com'
+    server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+    server.login(gmail_user, gmail_password)
+    for email in config.EMAILS:
+        server.sendmail(msg['From'], email, msg.as_string())
+        #server.sendmail(msg['From'], msg['To'], msg.as_string())
+    server.quit()
 
 
 s.enter(1, 1, run, (s, ))
