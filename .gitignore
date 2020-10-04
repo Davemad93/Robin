@@ -3,3 +3,4 @@ jacobs_robin.py
 pyrh_files/
 .history
 .vscode
+__pycache__/
