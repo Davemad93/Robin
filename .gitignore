@@ -2,3 +2,4 @@ config.py
 jacobs_robin.py
 pyrh_files/
 .history
+.vscode
