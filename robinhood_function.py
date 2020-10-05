@@ -1,11 +1,12 @@
 from email.mime.text import MIMEText
+from datetime import datetime
 import smtplib
 import config
 
-def buy_stock(logic_data, entered_trade, close_prices, instrument):
+def buy_stock(logic_data, entered_trade, close_prices, instrument, user, rh):
     # Check latest day:year rsi.
     rsi = logic_data['RSI']
-    if rsi[-1] <= 20 and not entered_trade:  # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
+    if rsi[-1] <= 30 and not entered_trade:  # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
         msg = "RSI is below 20! Sending email that we are entering intraday trading to BUY our stock. Utilizing 5minute:day chart to do so"
         #send_email('ALERT!!!',msg)
         print(msg)
@@ -15,13 +16,32 @@ def buy_stock(logic_data, entered_trade, close_prices, instrument):
         for x in range(1, 11):
             print("CLOSE: {} RSI: {}".format(close_prices[-x], rsi_5[-x]))
 
-        # Check latest 5minute:60day rsi. If below 20 SELL!!
-        if rsi_5[-1] <= 20:
+        print("CURRENT RSI--", rsi_5[-1])
+        # Check latest 5minute:60day rsi. If below 20 Buy!!
+        if rsi_5[-1] <= 30 and user.num_of_trades > 0:
             # Market buy order, not a limit order.
-            #rh.place_buy_order(instrument, 10)
+            print("buying....")
+            rh.place_buy_order(instrument, 10)
+            user.bought_date = datetime.today()
+            log_stock("bought at" + instrument,"database.txt")
             entered_trade = True # Entering trade
 
-def sell_stock(logic_data, entered_trade, close_prices, instrument):
+def log_stock(stock, filename):
+    f = open(filename, "a")
+    f.write("{0} -- {1}\n".format(datetime.now().strftime("%Y-%m-%d %H:%M"), stock))
+    f.close()
+
+def read_file(file):
+    my_file = open(file, "r")
+    content = my_file.read()
+    content_list = content.split("\n")
+    my_file.close()
+    clean_list =  []
+    [clean_list.append(float(item.split(" -- ")[1])) for item in content_list]
+    return clean_list
+
+
+def sell_stock(logic_data, entered_trade, close_prices, instrument, user, rh):
     # Check latest day:year rsi.
     rsi = logic_data['RSI']
     if rsi[-1] >= 80 and entered_trade: # Will only sell if we have entered a trade.
@@ -35,10 +55,14 @@ def sell_stock(logic_data, entered_trade, close_prices, instrument):
             print("CLOSE: {} RSI: {}".format(close_prices[-x], rsi_5[-x]))
 
         # Check latest 5minute:60day rsi. If above 80 SELL!!
-        if rsi_5[-1] >= 80:
+        if rsi_5[-1] >= 80 and user.num_of_trades > 0:
             # Market buy order, not a limit order.
-            #rh.place_sell_order(instrument, 10)
+            print("selling....")
+            rh.place_sell_order(instrument, 10)
             entered_trade = False # Exiting trade
+            log_stock("sold at" + instrument,"database.txt")
+            if user.bought_date == datetime.today:
+                user.num_of_trades -= 1
 
 def send_email(sbj, msg):
     gmail_user = config.GUSER 
