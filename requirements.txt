@@ -1,0 +1,11 @@
+numpy
+tulipy 
+schedule
+pyotp
+robin-stocks
+pyrh
+pytz
+python-dotenv
+yahoo_finance
+unittest
+asyncio
