@@ -3,28 +3,25 @@ from datetime import datetime
 import smtplib
 import config
 
-def buy_stock(logic_data, entered_trade, close_prices, instrument, user, rh):
+def buy_stock(logic_data, instrument, user, rh, quote_data):
     # Check latest day:year rsi.
     rsi = logic_data['RSI']
-    if rsi[-1] <= 30 and not entered_trade:  # and not enterTrade means we will not buy again after we bought in for this trade. This is typically for long positions, remove this for short pos
-        msg = "RSI is below 20! Sending email that we are entering intraday trading to BUY our stock. Utilizing 5minute:day chart to do so"
+    print("CURRENT DAILY RSI--", rsi[-1])
+    if rsi[-1] <= 45 and  user.num_of_trades < 4: # TODO: Figure out day trading limit logic
+        msg = "\nRSI is below 30 on the daily charts! Start day trading!"
         #send_email('ALERT!!!',msg)
         print(msg)
 
         rsi_5 = logic_data['RSI_5']
-        print("Previous RSIs")
-        for x in range(1, 11):
-            print("CLOSE: {} RSI: {}".format(close_prices[-x], rsi_5[-x]))
 
-        print("CURRENT RSI--", rsi_5[-1])
+        print("\nCURRENT FIVE MIN RSI--", rsi_5[-1])
         # Check latest 5minute:60day rsi. If below 20 Buy!!
-        if rsi_5[-1] <= 30 and user.num_of_trades > 0:
-            # Market buy order, not a limit order.
-            print("buying....")
-            rh.place_buy_order(instrument, 10)
+        if rsi_5[-1] <= 65 and user.num_of_trades > 0:
+            print("Buying....\n")
+            #rh.place_buy_order(instrument, 1)
             user.bought_date = datetime.today()
-            log_stock("bought at" + instrument,"database.txt")
-            entered_trade = True # Entering trade
+            log_stock("Bought at: $" + logic_data["LTP"] + " Making your avg cost to be...","database.txt") # TODO: Need an avg cost func made
+            user.num_of_trades += 1
 
 def log_stock(stock, filename):
     f = open(filename, "a")
@@ -41,26 +38,20 @@ def read_file(file):
     return clean_list
 
 
-def sell_stock(logic_data, entered_trade, close_prices, instrument, user, rh):
+def sell_stock(logic_data, instrument, user, rh, quote_data):
     # Check latest day:year rsi.
     rsi = logic_data['RSI']
-    if rsi[-1] >= 80 and entered_trade: # Will only sell if we have entered a trade.
-        msg = "RSI is abvove 80! Sending email that we are entering intraday trading to SELL our stock. Utilizing 5minute:day chart to do so"
+    if rsi[-1] >= 80 and user.num_of_trades > 0: # TODO: Figure out day trading limit logic
+        msg = "\nRSI is abvove 80 on the daily charts! Start day trading!"
         #send_email('ALERT!!!',msg)
         print(msg)
 
-        rsi_5 = logic_data['RSI_5']
-        print("Previous RSIs")
-        for x in range(1, 11):
-            print("CLOSE: {} RSI: {}".format(close_prices[-x], rsi_5[-x]))
-
+        print("\nCURRENT FIVE MIN RSI--", rsi_5[-1])
         # Check latest 5minute:60day rsi. If above 80 SELL!!
-        if rsi_5[-1] >= 80 and user.num_of_trades > 0:
-            # Market buy order, not a limit order.
-            print("selling....")
-            rh.place_sell_order(instrument, 10)
-            entered_trade = False # Exiting trade
-            log_stock("sold at" + instrument,"database.txt")
+        if logic_data["RSI_5"][-1] >= 80:
+            print("Selling....\n")
+            #rh.place_sell_order(instrument, 1)
+            log_stock("Sold at: $" + logic_data["LTP"] + " With a profit of...", "database.txt") # TODO: (sp - avgcost) * shares = profits gained/lost ....I think.
             if user.bought_date == datetime.today:
                 user.num_of_trades -= 1
 
