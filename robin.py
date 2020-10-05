@@ -59,7 +59,6 @@ async def run():
 
         trade_logic_data = {'RSI':rsi, "RSI_5":rsi_5, "fivemin_close_prices":FIVEMIN_DATA }
 
-        rsi[-1] = 17
         ## BUYING LOGIC 
         robinhood_function.buy_stock(trade_logic_data, entered_trade, FIVEMIN_DATA, instrument, user, rh)
 
