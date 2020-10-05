@@ -8,6 +8,7 @@ import sched, time
 import pyotp
 import robinhood_function
 import asyncio
+from user import User
 
 # Log in to Robinhood app (will prompt for two-factor)
 rh = Robinhood()
@@ -19,7 +20,9 @@ rh.login(username=config.USERNAME,
 entered_trade = False
 
 # STOCK TICKER
-stock_ticker = "WKHS"
+stock_ticker = "SUNW"
+
+user = User(0,0,0,0,3,None)
 
 # Get quote data from RH API
 day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')
@@ -27,6 +30,7 @@ day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')
 async def run():
     while True:
         global entered_trade
+
         time_string = time.strftime("%m/%d/%Y, %H:%M:%S", time.localtime())
 
         # POST TIME
@@ -46,6 +50,7 @@ async def run():
 
         # Get stock instrument
         instrument = rh.instruments(stock_ticker)[0]
+        print(instrument)
 
         # Calculate Indicator
         indicator_period = 3
@@ -54,12 +59,11 @@ async def run():
 
         trade_logic_data = {'RSI':rsi, "RSI_5":rsi_5, "fivemin_close_prices":FIVEMIN_DATA }
 
-        rsi[-1] = 17
         ## BUYING LOGIC 
-        robinhood_function.buy_stock(trade_logic_data, entered_trade, FIVEMIN_DATA, instrument)
+        robinhood_function.buy_stock(trade_logic_data, entered_trade, FIVEMIN_DATA, instrument, user, rh)
 
         ## SELLING LOGIG
-        robinhood_function.sell_stock(trade_logic_data, entered_trade, FIVEMIN_DATA, instrument)
+        robinhood_function.sell_stock(trade_logic_data, entered_trade, FIVEMIN_DATA, instrument, user, rh)
 
         #call this method again every 5 minutes for new price changes
         await asyncio.sleep(300)
