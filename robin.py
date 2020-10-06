@@ -17,9 +17,9 @@ rh.login(username=config.USERNAME,
          qr_code=config.MFA)
 
 # STOCK TICKER
-stock_ticker = input("Enter Stock ticker you would like to trade: ").upper() # This needs to be caps
-
-user = User(0,0,0,0,0,None)
+stock_ticker = input("Enter Stock ticker you would like to trade: ").upper()
+# Create a User and set the day trade limit.
+user = User(0,0,0,0,3,None)
 
 # Get quote data from RH API
 day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')
@@ -37,18 +37,14 @@ async def run():
 
         # Create list of closing prices from RH API
         close_prices = []
-        for key in day_year_quotes["results"][0]["historicals"]:
-            close_prices.append(float(key['close_price']))
+        [close_prices.append(float(key['close_price'])) for key in day_year_quotes["results"][0]["historicals"]]
 
         # Get stock quote
         quote_data = rh.get_quote(stock_ticker)
 
         # Manually insert LATEST TRADE PRICE to CLOSE PRICES to calculate RSI better.
         #print(quote_data)
-        if datetime.now().hour >= 15:
-            latest_trade_price = float(quote_data['last_extended_hours_trade_price'])
-        else:
-            latest_trade_price = float(quote_data['last_trade_price'])
+        latest_trade_price = get_latest_trading_price(quote_data)
 
         # Create Numpy DataFrame
         DAILY_DATA = np.array(close_prices)
@@ -65,21 +61,31 @@ async def run():
         trade_logic_data = {"LTP": str(latest_trade_price), 'RSI':rsi, "RSI_5":rsi_5, }
 
         print("Previous daily RSIs")
-        for x in range(1, 11):
-            print("CLOSE: {} RSI: {}".format(DAILY_DATA[-x], rsi[-x]))
-
+        get_list_of_rsi(DAILY_DATA, rsi)
+        print("-----------------------")
         print("Previous 5 minute RSIs")
-        for x in range(1, 11):
-            print("CLOSE: {} RSI: {}".format(FIVEMIN_DATA[-x], rsi_5[-x]))
+        get_list_of_rsi(FIVEMIN_DATA, rsi_5)
 
-        ## BUYING LOGIC 
+        ## BUYING LOGIC
         robinhood_function.buy_stock(trade_logic_data, instrument, user, rh, quote_data)
 
-        ## SELLING LOGIG
+        ## SELLING LOGIC
         robinhood_function.sell_stock(trade_logic_data, instrument, user, rh, quote_data)
 
         # Call this method again every 5 minutes for new price changes
-        await asyncio.sleep(15)
+        print()
+        print()
+        await asyncio.sleep(config.SLEEP)
+
+def get_list_of_rsi(data_type, rsi_type):
+    return [print("CLOSE: {} RSI: {}".format(data_type[-x], rsi_type[-x])) for x in range(1, 11)]
+            
+
+def get_latest_trading_price(quotes):
+    if datetime.now().hour >= 15:
+       return float(quotes['last_extended_hours_trade_price'])
+    else:
+       return float(quotes['last_trade_price'])
 
 loop = asyncio.get_event_loop()
 loop.create_task(run())

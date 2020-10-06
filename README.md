@@ -24,7 +24,7 @@ GPASS = "password"
 EMAILS = "email_to_send_to"
 
 # Poll data every 5 minutes
-POLL_INTERVAL = "300"
+SLEEP = 300
 ```
 4. Test run your project locally with `python robin.py`
 
