@@ -9,3 +9,5 @@ python-dotenv
 yahoo_finance
 unittest
 asyncio
+smtplib
+MIMEText
