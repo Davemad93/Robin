@@ -6,9 +6,9 @@ import email_client
 def buy_stock(logic_data, instrument, user, rh, quote_data):
     # Check latest day:year rsi.
     rsi = logic_data['RSI']
-    print("CURRENT DAILY RSI--", rsi[-1])
-    if rsi[-1] <= 30 and  user.num_of_trades > 0:
-        print("\nRSI is below 30 on the daily charts! Start day trading!")
+    print("\nCURRENT DAILY RSI--", rsi[-1])
+    if rsi[-1] <= 20 and  user.num_of_trades > 0:
+        print("\nRSI is below 20 on the daily charts! Start day trading!")
         #email_client.send_email('ALERT!!!',msg)
 
         rsi_5 = logic_data['RSI_5']

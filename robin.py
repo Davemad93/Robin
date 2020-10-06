@@ -42,9 +42,11 @@ async def run():
         # Get stock quote
         quote_data = rh.get_quote(stock_ticker)
 
-        # Manually insert LATEST TRADE PRICE to CLOSE PRICES to calculate RSI better.
-        #print(quote_data)
+        # Get latest trade price
         latest_trade_price = get_latest_trading_price(quote_data)
+
+        # Manually insert LATEST TRADE PRICE to CLOSE PRICES to calculate RSI better.
+        close_prices.append(float(latest_trade_price))
 
         # Create Numpy DataFrame
         DAILY_DATA = np.array(close_prices)
