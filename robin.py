@@ -9,6 +9,7 @@ import pyotp
 import robinhood_function
 import asyncio
 from user import User
+import database_function
 
 # Log in to Robinhood app (will prompt for two-factor)
 rh = Robinhood()
@@ -19,7 +20,10 @@ rh.login(username=config.USERNAME,
 # STOCK TICKER
 stock_ticker = input("Enter Stock ticker you would like to trade: ").upper()
 # Create a User and set the day trade limit.
-user = User(0,0,0,0,3,None)
+
+number_of_trades = database_function.get_number_of_trades("database.txt")
+
+user = User(0,0,0,0,int(number_of_trades),None)
 
 # Get quote data from RH API
 day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')
@@ -81,7 +85,7 @@ async def run():
 
 def get_list_of_rsi(data_type, rsi_type):
     return [print("CLOSE: {} RSI: {}".format(data_type[-x], rsi_type[-x])) for x in range(1, 11)]
-            
+
 
 def get_latest_trading_price(quotes):
     if datetime.now().hour >= 15:

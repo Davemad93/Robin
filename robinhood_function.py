@@ -1,6 +1,9 @@
 from datetime import datetime
 import log_helper
 import email_client
+import database_function
+
+database = "database.txt"
 
 
 def buy_stock(logic_data, instrument, user, rh, quote_data):
@@ -21,7 +24,7 @@ def buy_stock(logic_data, instrument, user, rh, quote_data):
 
             user.bought_date = datetime.today()
             # TODO: Need an avg cost func made
-            log_helper.log_stock("Bought at: $" + logic_data["LTP"] + " Making your avg cost to be...","database.txt")
+            log_helper.log_stock("Bought at: $" + logic_data["LTP"] + " Making your avg cost to be...", database)
 
 def sell_stock(logic_data, instrument, user, rh, quote_data):
     # Check latest day:year rsi.
@@ -38,9 +41,10 @@ def sell_stock(logic_data, instrument, user, rh, quote_data):
             #rh.place_sell_order(instrument, 1)
 
             # TODO: (sp - avgcost) * shares = profits gained/lost ....I think.
-            log_helper.log_stock("Sold at: $" + logic_data["LTP"] + " With a profit of...", "database.txt")
+            log_helper.log_stock("Sold at: $" + logic_data["LTP"] + " With a profit of...", database)
             if user.bought_date == datetime.today:
                 user.num_of_trades -= 1
+                database_function.update_trade_number(str(user.num_of_trades), database)
                 print("\nONLY "+ user.num_of_trades + "LEFT!")          
 
 # takes in two numbers and gives back the percent difference wheather it be an increase or decrease.
