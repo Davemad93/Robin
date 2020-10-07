@@ -1,6 +1,7 @@
 from datetime import datetime
 import log_helper
 import email_client
+import database_function
 
 
 def buy_stock(logic_data, instrument, user, rh, quote_data):
@@ -41,6 +42,7 @@ def sell_stock(logic_data, instrument, user, rh, quote_data):
             log_helper.log_stock("Sold at: $" + logic_data["LTP"] + " With a profit of...", "database.txt")
             if user.bought_date == datetime.today:
                 user.num_of_trades -= 1
+                database_function.update_trade_number(user.num_of_trades, "database.txt")
                 print("\nONLY "+ user.num_of_trades + "LEFT!")          
 
 # takes in two numbers and gives back the percent difference wheather it be an increase or decrease.
