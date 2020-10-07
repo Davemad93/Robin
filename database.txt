@@ -1,1 +1,4 @@
-3
+Number or day trades left: 3
+
+Transactions:
+

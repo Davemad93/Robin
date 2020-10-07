@@ -2,7 +2,7 @@ from datetime import datetime
 
 def log_stock(stock, filename):
     f = open(filename, "a")
-    f.write("{0} -- {1}\n".format(datetime.now().strftime("%Y-%m-%d %H:%M"), stock))
+    f.write("\n{0} -- {1}".format(datetime.now().strftime("%Y-%m-%d %H:%M"), stock))
     f.close()
 
 def read_file(file):
