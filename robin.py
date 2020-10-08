@@ -72,6 +72,9 @@ async def run():
         print("Previous 5 minute RSIs")
         get_list_of_rsi(FIVEMIN_DATA, rsi_5)
 
+        print("\nCURRENT DAILY RSI--", rsi[-1])
+        #print("\nCURRENT FIVE MIN RSI--", rsi_5[-1])
+
         ## BUYING LOGIC
         robinhood_function.buy_stock(trade_logic_data, instrument, user, rh, quote_data)
 
