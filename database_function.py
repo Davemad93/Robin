@@ -4,13 +4,11 @@ def update_trade_number(number_of_trades, filename):
     list_of_lines = []
     # Read file into a list
     for line, text in enumerate(original):
+        if line == 0:
+            text = "Number or day trades left: {}\n\nTransactions:\n\n".format(number_of_trades)
+            list_of_lines.append(text)
         # First 4 lines
-        if line <= 3:
-            if line == 0:
-                text = "Number or day trades left: {}\n\nTransactions:\n\n".format(number_of_trades)
-                list_of_lines.append(text)
-        # Everything else, aka transactions
-        else:
+        elif line >= 3:
             list_of_lines.append(text)
     original.close()
 
