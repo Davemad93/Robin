@@ -1,15 +1,12 @@
 from pyrh import Robinhood
-from datetime import datetime
+from user import User
 import config
 import numpy as np
 import tulipy as ti
 import yahoo_finance
-import sched, time
-import pyotp
-import robinhood_function
+import robinhood_function, pyotp
 import asyncio
-from user import User
-import database_function
+import time
 
 # Log in to Robinhood app (will prompt for two-factor)
 rh = Robinhood()
@@ -17,13 +14,13 @@ rh.login(username=config.USERNAME,
          password=config.PASSWORD,
          qr_code=config.MFA)
 
-# STOCK TICKER
+# Set some variables
 stock_ticker = input("Enter Stock ticker you would like to trade: ").upper()
+shares_to_buy = input("Enter amount of shares to purchase: ")
+
 # Create a User and set the day trade limit.
-
-number_of_trades = database_function.get_number_of_trades("database.txt")
-
-user = User(0,0,0,0,int(number_of_trades),None)
+user = User(rh, stock_ticker, shares_to_buy)
+#print(user)
 
 # Get quote data from RH API
 day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')
@@ -43,14 +40,8 @@ async def run():
         close_prices = []
         [close_prices.append(float(key['close_price'])) for key in day_year_quotes["results"][0]["historicals"]]
 
-        # Get stock quote
-        quote_data = rh.get_quote(stock_ticker)
-
-        # Get latest trade price
-        latest_trade_price = get_latest_trading_price(quote_data)
-
         # Manually insert LATEST TRADE PRICE to CLOSE PRICES to calculate RSI better.
-        close_prices.append(float(latest_trade_price))
+        close_prices.append(float(user.latest_trade_price))
 
         # Create Numpy DataFrame
         DAILY_DATA = np.array(close_prices)
@@ -64,7 +55,7 @@ async def run():
         rsi = ti.rsi(DAILY_DATA, period=indicator_period)
         rsi_5 = ti.rsi(FIVEMIN_DATA, period=indicator_period)
 
-        trade_logic_data = {"LTP": str(latest_trade_price), 'RSI':rsi, "RSI_5":rsi_5, }
+        trade_logic_data = {'RSI':rsi, "RSI_5":rsi_5, }
 
         print("Previous daily RSIs")
         get_list_of_rsi(DAILY_DATA, rsi)
@@ -73,13 +64,12 @@ async def run():
         get_list_of_rsi(FIVEMIN_DATA, rsi_5)
 
         print("\nCURRENT DAILY RSI--", rsi[-1])
-        #print("\nCURRENT FIVE MIN RSI--", rsi_5[-1])
 
         ## BUYING LOGIC
-        robinhood_function.buy_stock(trade_logic_data, instrument, user, rh, quote_data)
+        robinhood_function.buy_stock(trade_logic_data, instrument, user, rh)
 
         ## SELLING LOGIC
-        robinhood_function.sell_stock(trade_logic_data, instrument, user, rh, quote_data)
+        robinhood_function.sell_stock(trade_logic_data, instrument, user, rh)
 
         # Call this method again every 5 minutes for new price changes
         print()
@@ -89,12 +79,6 @@ async def run():
 def get_list_of_rsi(data_type, rsi_type):
     return [print("CLOSE: {} RSI: {}".format(data_type[-x], rsi_type[-x])) for x in range(1, 11)]
 
-
-def get_latest_trading_price(quotes):
-    if datetime.now().hour >= 15:
-       return float(quotes['last_extended_hours_trade_price'])
-    else:
-       return float(quotes['last_trade_price'])
 
 loop = asyncio.get_event_loop()
 loop.create_task(run())
