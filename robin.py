@@ -15,10 +15,10 @@ rh.login(username=config.USERNAME,
          qr_code=config.MFA)
 
 # Set some variables
-stock_ticker = input("Enter Stock ticker you would like to trade: ").upper()
+stock_ticker = input("\nEnter Stock ticker you would like to trade: ").upper()
 shares_to_buy = input("Enter amount of shares to purchase: ")
 
-# Create a User and set the day trade limit.
+# Create a User
 user = User(rh, stock_ticker, shares_to_buy)
 #print(user)
 
@@ -63,7 +63,7 @@ async def run():
         print("Previous 5 minute RSIs")
         get_list_of_rsi(FIVEMIN_DATA, rsi_5)
 
-        print("\nCURRENT DAILY RSI--", rsi[-1])
+        print("\nCURRENT DAILY RSI--{}%".format(rsi[-1]))
 
         ## BUYING LOGIC
         robinhood_function.buy_stock(trade_logic_data, instrument, user, rh)
@@ -77,7 +77,7 @@ async def run():
         await asyncio.sleep(config.SLEEP)
 
 def get_list_of_rsi(data_type, rsi_type):
-    return [print("CLOSE: {} RSI: {}".format(data_type[-x], rsi_type[-x])) for x in range(1, 11)]
+    return [print("CLOSE: ${} RSI: {}%".format(data_type[-x], rsi_type[-x])) for x in range(1, 11)]
 
 
 loop = asyncio.get_event_loop()
