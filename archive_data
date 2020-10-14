@@ -3,14 +3,14 @@ database=./database.txt
 if [ -f "$database" ]; then
 	if [ -d "./archive" ]; then
 		echo Copying database.txt to archive folder.
-		cp $database "./archive/$(date +"%m-%d-%Y-%H-%M-%S")-database.txt" 
-		echo Archived filename: $(date +"%m-%d-%Y-%H-%M-%S")-database.txt
+		cp $database "./archive/$(date +"%m-%d-%Y-%H:%M:%S")-database.txt" 
+		echo Archived filename: $(date +"%m-%d-%Y-%H:%M:%S")-database.txt
 
 	else
 		echo Folder does not exist. Creating folder now and copying file.
 		mkdir ./archive
-		cp $database "./archive/$(date +"%m-%d-%Y-%H-%M-%S")-database.txt" 
-		echo Archived filename: $(date +"%m-%d-%Y-%H-%M-%S")-database.txt
+		cp $database "./archive/$(date +"%m-%d-%Y-%H:%M:%S")-database.txt" 
+		echo Archived filename: $(date +"%m-%d-%Y-%H:%M:%S")-database.txt
 	fi
 else
 	echo $database does not exist. Please check your directory. Note: Must run this in same folder as database.txt.
