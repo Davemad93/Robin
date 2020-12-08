@@ -8,22 +8,21 @@ database = "database.txt"
 def buy_stock(logic_data, instrument, user, rh):
     rsi = logic_data['RSI']
     # Check latest day:year rsi.
-    rsi[-1] = 17
     if rsi[-1] <= 20:
         if user.buying_power > user.estimated_trans_cost:
             rsi_5 = logic_data['RSI_5']
-            email_client.send_email('ALERT!!!',"Daily RSI is below 20")
+            #email_client.send_email('ALERT!!!',"Daily RSI is below 20")
             print("CURRENT FIVE MIN RSI--{}%".format(rsi_5[-1]))
 
             # Check latest 5minute:60day rsi. If below 20 Buy
             if rsi_5[-1] <= 20 and user.day_trades > 0:
                 print("5 minute RSI below 20. Buying....\n")
                 rh.place_buy_order(instrument, user.shares_to_buy)
-
                 user.bought_date = datetime.today()
-                # TODO: Need an avg cost func made
-                log_helper.log_stock("Bought {} shares at: $".format(),user.shares_to_buy,user.latest_trade_price), database)
+                log_helper.log_stock("{}: Bought {} share(s) at ${}".format(user.stock_ticker, user.shares_to_buy, user.latest_trade_price), database)
 
+            elif user.day_trades == 0:
+                print("Out of day trades.")
         elif user.buying_power < user.estimated_trans_cost:
             print("Warning you're trying to buy more than you have money for.")
 
@@ -32,22 +31,23 @@ def sell_stock(logic_data, instrument, user, rh):
     rsi = logic_data['RSI']
     # Check latest day:year rsi.
     if rsi[-1] >= 80:
-        if user.day_trades > 0: # TODO: and has an open position.
+        if user.day_trades > 0: # TODO: and has an open position. (and user.average > 0.0)
             rsi_5 = logic_data['RSI_5']
             print("\nCURRENT FIVE MIN RSI--{}%".format(rsi_5[-1]))
             #email_client.send_email('ALERT!!!',msg)
             
             # Check latest 5minute:60day rsi. If above 80 SELL
-            if logic_data["RSI_5"][-1] >= 80:
+            if logic_data["RSI_5"][-1] >= 80 and user.shares_owned > 0:
                 print("5 minute RSi is above 80. Selling....\n")
                 rh.place_sell_order(instrument, user.shares_to_buy)
+                log_helper.log_stock("{}: Sold {} share(s) at ${} for a gain of ${}".format(user.stock_ticker, user.shares_to_buy, user.latest_trade_price,user.gainsloses), database)
 
-                log_helper.log_stock("Sold at ${} for a gain of ${}".format(user.latest_trade_price,user.gainsloses), database)
-                # TODO: (sp - avgcost) * shares = profits gained/lost ....I think.
                 if user.bought_date == datetime.today:
                     user.day_trades -= 1
                     database_function.update_trade_number(str(user.day_trades), database)
                     print("\nONLY "+ user.day_trades + " LEFT!")
+            else:
+                print("5 min RSI is above 80 but we do not have any shares to sell")
         else:
             print("OUT OF DAY TRADES OR DONT HAVE AN OPEN POSITION")
 

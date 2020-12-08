@@ -20,7 +20,6 @@ shares_to_buy = input("Enter amount of shares to purchase: ")
 
 # Create a User
 user = User(rh, stock_ticker, shares_to_buy)
-#print(user)
 
 # Get quote data from RH API
 day_year_quotes = rh.get_historical_quotes(stock_ticker, 'day', 'year')
@@ -50,7 +49,7 @@ async def run():
         # Get stock instrument
         instrument = rh.instruments(stock_ticker)[0]
 
-        # Calculate Indicator
+        # Calculate Indicator - maybe try rsi 10/14 for daily
         indicator_period = 3
         rsi = ti.rsi(DAILY_DATA, period=indicator_period)
         rsi_5 = ti.rsi(FIVEMIN_DATA, period=indicator_period)
@@ -64,6 +63,7 @@ async def run():
         get_list_of_rsi(FIVEMIN_DATA, rsi_5)
 
         print("\nCURRENT DAILY RSI--{}%".format(rsi[-1]))
+        print(user)
 
         ## BUYING LOGIC
         robinhood_function.buy_stock(trade_logic_data, instrument, user, rh)
